@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dify 应用性能分析仪表板</title>
+    <!-- 引入Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- 引入jsPDF用于生成PDF报告 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- 引入xlsx用于导出Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  </head>
+  <body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+      <!-- 页头 -->
+      <header class="mb-8">
+        <div class="flex justify-between items-center">
+          <h1 class="text-3xl font-bold text-gray-800">
+            Dify 应用性能分析仪表板
+          </h1>
+          <div class="flex space-x-4">
+            <button
+              id="exportCSV"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              导出CSV
+            </button>
+            <button
+              id="exportExcel"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            >
+              导出Excel
+            </button>
+            <button
+              id="generatePDF"
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+            >
+              生成PDF报告
+            </button>
+          </div>
+        </div>
+
+        <!-- 全局时间范围选择器 -->
+        <div class="mt-4 flex items-center space-x-4">
+          <span class="text-gray-700">时间范围：</span>
+          <div class="relative">
+            <select
+              id="timeRange"
+              class="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="last24h">过去24小时</option>
+              <option value="last7d">过去7天</option>
+              <option value="last30d">过去30天</option>
+              <option value="last90d">过去90天</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div
+              class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="relative">
+            <select
+              id="timeGranularity"
+              class="appearance-none bg-white border border-gray-300 rounded-md px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="hour">小时</option>
+              <option value="day">天</option>
+              <option value="week">周</option>
+              <option value="month">月</option>
+            </select>
+            <div
+              class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"
+            >
+              <svg
+                class="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
+            </div>
+          </div>
+
+          <div id="customDateRange" class="hidden flex items-center space-x-2">
+            <input
+              type="date"
+              id="startDate"
+              class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span>至</span>
+            <input
+              type="date"
+              id="endDate"
+              class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              id="applyCustomRange"
+              class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              应用
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 核心指标总览 -->
+      <section class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">核心指标总览</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-gray-500">总调用次数</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">1,284,573</p>
+              </div>
+              <div class="text-green-500 flex items-center">
+                <span>+12.5%</span>
+                <svg
+                  class="h-4 w-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 15l7-7 7 7"
+                  ></path>
+                </svg>
+              </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+              <span>较上期增长了145,732次</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-gray-500">平均响应时间</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">
+                  267<span class="text-lg">ms</span>
+                </p>
+              </div>
+              <div class="text-red-500 flex items-center">
+                <span>+5.2%</span>
+                <svg
+                  class="h-4 w-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+              <span>较上期增加了13ms</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-gray-500">错误率</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">
+                  0.82<span class="text-lg">%</span>
+                </p>
+              </div>
+              <div class="text-green-500 flex items-center">
+                <span>-0.4%</span>
+                <svg
+                  class="h-4 w-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  ></path>
+                </svg>
+              </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+              <span>较上期下降了0.4个百分点</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex justify-between items-start">
+              <div>
+                <p class="text-sm text-gray-500">累计成本</p>
+                <p class="text-3xl font-bold text-gray-800 mt-1">¥4,782.65</p>
+              </div>
+              <div class="text-red-500 flex items-center">
+                <span>+8.7%</span>
+                <svg
+                  class="h-4 w-4 ml-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 15l7-7 7 7"
+                  ></path>
+                </svg>
+              </div>
+            </div>
+            <div class="mt-4 text-sm text-gray-600">
+              <span>较上期增加了¥382.25</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 调用量与响应时间分析 -->
+      <section class="mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">
+              调用量与响应时间分析
+            </h3>
+            <div class="flex items-center space-x-2">
+              <select
+                id="callVolumeGranularity"
+                class="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="hour">小时</option>
+                <option value="day" selected>天</option>
+                <option value="week">周</option>
+                <option value="month">月</option>
+              </select>
+            </div>
+          </div>
+          <div id="callVolumeChart" class="w-full h-80"></div>
+        </div>
+      </section>
+
+      <!-- 模型性能对比 -->
+      <section class="mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">模型性能对比</h3>
+            <div class="flex items-center space-x-2">
+              <select
+                id="modelComparisonMetric"
+                class="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="responseTime">响应时间</option>
+                <option value="successRate">成功率</option>
+                <option value="qualityScore">质量评分</option>
+              </select>
+            </div>
+          </div>
+          <div id="modelComparisonChart" class="w-full h-80"></div>
+        </div>
+      </section>
+
+      <!-- 成本分析面板 -->
+      <section class="mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">成本分析</h3>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <div id="costTrendChart" class="w-full h-72"></div>
+            </div>
+            <div>
+              <div id="costBreakdownChart" class="w-full h-72"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 用户会话分析 -->
+      <section class="mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">用户会话分析</h3>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <h4 class="text-lg font-medium text-gray-700 mb-3">
+                会话时长分布
+              </h4>
+              <div id="sessionDurationChart" class="w-full h-72"></div>
+            </div>
+            <div>
+              <h4 class="text-lg font-medium text-gray-700 mb-3">
+                用户满意度分布
+              </h4>
+              <div id="userSatisfactionChart" class="w-full h-72"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 性能异常检测 -->
+      <section class="mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold text-gray-800">性能异常检测</h3>
+            <button
+              class="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
+            >
+              配置告警
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    时间
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    类型
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    指标
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    异常值
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    正常范围
+                  </th>
+                  <th
+                    scope="col"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    严重程度
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    2023-08-15 14:23
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    响应时间
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    平均响应时间
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    873ms
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    200-300ms
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800"
+                      >严重</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    2023-08-15 08:45
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    错误率
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    API错误率
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    3.6%
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    0-1%
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800"
+                      >中等</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    2023-08-14 22:17
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    调用量
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    每分钟请求数
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    237
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    10-150
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span
+                      class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800"
+                      >严重</span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // 初始化ECharts图表
+      document.addEventListener("DOMContentLoaded", function () {
+        // 调用量与响应时间分析图表
+        const callVolumeChart = echarts.init(
+          document.getElementById("callVolumeChart")
+        );
+        const callVolumeOption = {
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "cross",
+              crossStyle: {
+                color: "#999",
+              },
+            },
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              magicType: { show: true, type: ["line", "bar"] },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          legend: {
+            data: ["调用量", "平均响应时间", "错误率"],
+            top: "bottom",
+          },
+          xAxis: {
+            type: "category",
+            data: [
+              "8/9",
+              "8/10",
+              "8/11",
+              "8/12",
+              "8/13",
+              "8/14",
+              "8/15",
+              "8/16",
+            ],
+            axisPointer: {
+              type: "shadow",
+            },
+          },
+          yAxis: [
+            {
+              type: "value",
+              name: "调用量",
+              min: 0,
+              axisLabel: {
+                formatter: "{value}",
+              },
+            },
+            {
+              type: "value",
+              name: "响应时间/错误率",
+              min: 0,
+              axisLabel: {
+                formatter: "{value}",
+              },
+            },
+          ],
+          series: [
+            {
+              name: "调用量",
+              type: "bar",
+              data: [12000, 13500, 14200, 15800, 16300, 18200, 21500, 19800],
+            },
+            {
+              name: "平均响应时间",
+              type: "line",
+              yAxisIndex: 1,
+              data: [240, 245, 238, 252, 267, 280, 273, 265],
+            },
+            {
+              name: "错误率",
+              type: "line",
+              yAxisIndex: 1,
+              data: [1.2, 1.1, 0.9, 0.8, 0.7, 0.9, 0.8, 0.7],
+            },
+          ],
+        };
+        callVolumeChart.setOption(callVolumeOption);
+
+        // 模型性能对比图表
+        const modelComparisonChart = echarts.init(
+          document.getElementById("modelComparisonChart")
+        );
+        const modelComparisonOption = {
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+            },
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          legend: {
+            data: ["响应时间", "成功率", "质量评分"],
+            top: "bottom",
+          },
+          xAxis: {
+            type: "category",
+            data: [
+              "GPT-3.5",
+              "GPT-4",
+              "Claude-2",
+              "Llama-2",
+              "ERNIE Bot",
+              "Stable Diffusion",
+            ],
+            axisLabel: {
+              interval: 0,
+              rotate: 30,
+            },
+          },
+          yAxis: {
+            type: "value",
+          },
+          series: [
+            {
+              name: "响应时间",
+              type: "bar",
+              data: [235, 310, 275, 245, 290, 330],
+            },
+            {
+              name: "成功率",
+              type: "bar",
+              data: [98.5, 99.2, 98.7, 97.8, 98.1, 96.5],
+            },
+            {
+              name: "质量评分",
+              type: "bar",
+              data: [8.3, 9.1, 8.7, 7.9, 8.2, 7.6],
+            },
+          ],
+        };
+        modelComparisonChart.setOption(modelComparisonOption);
+
+        // 成本趋势图表
+        const costTrendChart = echarts.init(
+          document.getElementById("costTrendChart")
+        );
+        const costTrendOption = {
+          title: {
+            text: "每日API调用成本趋势",
+            left: "center",
+          },
+          tooltip: {
+            trigger: "axis",
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              magicType: { show: true, type: ["line", "bar"] },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          xAxis: {
+            type: "category",
+            data: [
+              "8/9",
+              "8/10",
+              "8/11",
+              "8/12",
+              "8/13",
+              "8/14",
+              "8/15",
+              "8/16",
+            ],
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: {
+              formatter: "¥{value}",
+            },
+          },
+          series: [
+            {
+              name: "每日成本",
+              type: "line",
+              data: [123.5, 145.2, 156.8, 178.2, 189.5, 210.7, 235.6, 215.8],
+              markPoint: {
+                data: [
+                  { type: "max", name: "最大值" },
+                  { type: "min", name: "最小值" },
+                ],
+              },
+              markLine: {
+                data: [{ type: "average", name: "平均值" }],
+              },
+            },
+          ],
+        };
+        costTrendChart.setOption(costTrendOption);
+
+        // 成本分布图表
+        const costBreakdownChart = echarts.init(
+          document.getElementById("costBreakdownChart")
+        );
+        const costBreakdownOption = {
+          title: {
+            text: "成本分布",
+            left: "center",
+          },
+          tooltip: {
+            trigger: "item",
+            formatter: "{a} <br/>{b}: ¥{c} ({d}%)",
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          legend: {
+            orient: "vertical",
+            left: "left",
+          },
+          series: [
+            {
+              name: "成本分布",
+              type: "pie",
+              radius: "55%",
+              center: ["50%", "50%"],
+              data: [
+                { value: 2385.6, name: "GPT-4" },
+                { value: 1250.3, name: "GPT-3.5" },
+                { value: 620.7, name: "Claude-2" },
+                { value: 345.2, name: "Llama-2" },
+                { value: 180.8, name: "其他模型" },
+              ],
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: "rgba(0, 0, 0, 0.5)",
+                },
+              },
+            },
+          ],
+        };
+        costBreakdownChart.setOption(costBreakdownOption);
+
+        // 会话时长分布图表
+        const sessionDurationChart = echarts.init(
+          document.getElementById("sessionDurationChart")
+        );
+        const sessionDurationOption = {
+          tooltip: {
+            trigger: "axis",
+            axisPointer: {
+              type: "shadow",
+            },
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          xAxis: {
+            type: "category",
+            data: [
+              "<1分钟",
+              "1-3分钟",
+              "3-5分钟",
+              "5-10分钟",
+              "10-30分钟",
+              ">30分钟",
+            ],
+          },
+          yAxis: {
+            type: "value",
+            name: "会话数",
+          },
+          series: [
+            {
+              name: "会话数",
+              type: "bar",
+              data: [4532, 7865, 5634, 3245, 1532, 687],
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: "#83bff6" },
+                  { offset: 0.5, color: "#188df0" },
+                  { offset: 1, color: "#188df0" },
+                ]),
+              },
+            },
+          ],
+        };
+        sessionDurationChart.setOption(sessionDurationOption);
+
+        // 用户满意度分布图表
+        const userSatisfactionChart = echarts.init(
+          document.getElementById("userSatisfactionChart")
+        );
+        const userSatisfactionOption = {
+          tooltip: {
+            trigger: "item",
+            formatter: "{a} <br/>{b}: {c} ({d}%)",
+          },
+          toolbox: {
+            feature: {
+              dataView: { show: true, readOnly: false },
+              restore: { show: true },
+              saveAsImage: { show: true },
+            },
+          },
+          legend: {
+            orient: "horizontal",
+            bottom: "bottom",
+          },
+          series: [
+            {
+              name: "用户满意度",
+              type: "pie",
+              radius: ["40%", "70%"],
+              avoidLabelOverlap: false,
+              itemStyle: {
+                borderRadius: 10,
+                borderColor: "#fff",
+                borderWidth: 2,
+              },
+              label: {
+                show: false,
+                position: "center",
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: "18",
+                  fontWeight: "bold",
+                },
+              },
+              labelLine: {
+                show: false,
+              },
+              data: [
+                { value: 1548, name: "非常满意" },
+                { value: 2835, name: "满意" },
+                { value: 876, name: "一般" },
+                { value: 354, name: "不满意" },
+                { value: 187, name: "非常不满意" },
+              ],
+            },
+          ],
+        };
+        userSatisfactionChart.setOption(userSatisfactionOption);
+
+        // 窗口大小变化时重新调整图表大小
+        window.addEventListener("resize", function () {
+          callVolumeChart.resize();
+          modelComparisonChart.resize();
+          costTrendChart.resize();
+          costBreakdownChart.resize();
+          sessionDurationChart.resize();
+          userSatisfactionChart.resize();
+        });
+
+        // 时间范围选择器逻辑
+        document
+          .getElementById("timeRange")
+          .addEventListener("change", function () {
+            const customRangeDiv = document.getElementById("customDateRange");
+            if (this.value === "custom") {
+              customRangeDiv.classList.remove("hidden");
+            } else {
+              customRangeDiv.classList.add("hidden");
+              // 更新所有图表数据...
+              updateAllCharts(this.value);
+            }
+          });
+
+        // 模型对比指标切换逻辑
+        document
+          .getElementById("modelComparisonMetric")
+          .addEventListener("change", function () {
+            updateModelComparisonChart(this.value);
+          });
+
+        // 调用量粒度调整逻辑
+        document
+          .getElementById("callVolumeGranularity")
+          .addEventListener("change", function () {
+            updateCallVolumeChart(this.value);
+          });
+
+        // 导出CSV功能
+        document
+          .getElementById("exportCSV")
+          .addEventListener("click", function () {
+            exportData("csv");
+          });
+
+        // 导出Excel功能
+        document
+          .getElementById("exportExcel")
+          .addEventListener("click", function () {
+            exportData("excel");
+          });
+
+        // 生成PDF报告
+        document
+          .getElementById("generatePDF")
+          .addEventListener("click", function () {
+            generatePDFReport();
+          });
+
+        // 自定义日期范围应用按钮
+        document
+          .getElementById("applyCustomRange")
+          .addEventListener("click", function () {
+            const startDate = document.getElementById("startDate").value;
+            const endDate = document.getElementById("endDate").value;
+            if (startDate && endDate) {
+              updateAllCharts("custom", startDate, endDate);
+            } else {
+              alert("请选择开始和结束日期");
+            }
+          });
+
+        // 初始化日期选择器默认值
+        const today = new Date();
+        const oneWeekAgo = new Date(today);
+        oneWeekAgo.setDate(today.getDate() - 7);
+
+        document.getElementById("startDate").valueAsDate = oneWeekAgo;
+        document.getElementById("endDate").valueAsDate = today;
+
+        // 更新所有图表数据的函数
+        function updateAllCharts(timeRange, startDate, endDate) {
+          // 这里模拟根据时间范围获取新数据并更新图表
+          console.log(`Updating charts with time range: ${timeRange}`);
+          if (timeRange === "custom") {
+            console.log(`Custom date range: ${startDate} to ${endDate}`);
+          }
+
+          // 这里应该是实际的API调用来获取不同时间范围的数据
+          // 然后使用新数据更新各个图表
+
+          // 模拟更新调用量图表
+          const newCallData = getRandomData(8, 10000, 25000);
+          callVolumeOption.series[0].data = newCallData;
+          callVolumeChart.setOption(callVolumeOption);
+
+          // 模拟更新其他图表...
+          // ...
+        }
+
+        // 更新模型对比图表的函数
+        function updateModelComparisonChart(metric) {
+          let newData;
+          let yAxisName;
+
+          switch (metric) {
+            case "responseTime":
+              newData = [235, 310, 275, 245, 290, 330];
+              yAxisName = "响应时间(ms)";
+              break;
+            case "successRate":
+              newData = [98.5, 99.2, 98.7, 97.8, 98.1, 96.5];
+              yAxisName = "成功率(%)";
+              break;
+            case "qualityScore":
+              newData = [8.3, 9.1, 8.7, 7.9, 8.2, 7.6];
+              yAxisName = "质量评分(0-10)";
+              break;
+          }
+
+          modelComparisonOption.series[0].data = newData;
+          modelComparisonOption.yAxis.name = yAxisName;
+          modelComparisonChart.setOption(modelComparisonOption);
+        }
+
+        // 更新调用量图表的函数
+        function updateCallVolumeChart(granularity) {
+          let xAxisData;
+
+          switch (granularity) {
+            case "hour":
+              xAxisData = [
+                "00:00",
+                "03:00",
+                "06:00",
+                "09:00",
+                "12:00",
+                "15:00",
+                "18:00",
+                "21:00",
+              ];
+              break;
+            case "day":
+              xAxisData = [
+                "8/9",
+                "8/10",
+                "8/11",
+                "8/12",
+                "8/13",
+                "8/14",
+                "8/15",
+                "8/16",
+              ];
+              break;
+            case "week":
+              xAxisData = ["第1周", "第2周", "第3周", "第4周"];
+              break;
+            case "month":
+              xAxisData = ["1月", "2月", "3月", "4月", "5月", "6月"];
+              break;
+          }
+
+          callVolumeOption.xAxis.data = xAxisData;
+          callVolumeOption.series[0].data = getRandomData(
+            xAxisData.length,
+            10000,
+            25000
+          );
+          callVolumeOption.series[1].data = getRandomData(
+            xAxisData.length,
+            200,
+            300
+          );
+          callVolumeOption.series[2].data = getRandomData(
+            xAxisData.length,
+            0.5,
+            1.5,
+            0.1
+          );
+          callVolumeChart.setOption(callVolumeOption);
+        }
+
+        // 生成随机数据辅助函数
+        function getRandomData(length, min, max, precision = 1) {
+          const data = [];
+          for (let i = 0; i < length; i++) {
+            let value = Math.random() * (max - min) + min;
+            if (precision < 1) {
+              value = parseFloat(
+                value.toFixed(Math.abs(Math.log10(precision)))
+              );
+            } else {
+              value = Math.round(value / precision) * precision;
+            }
+            data.push(value);
+          }
+          return data;
+        }
+
+        // 导出数据函数
+        function exportData(type) {
+          // 准备要导出的数据
+          const data = [
+            ["日期", "调用量", "平均响应时间(ms)", "错误率(%)", "成本(¥)"],
+            ["2023-08-09", 12000, 240, 1.2, 123.5],
+            ["2023-08-10", 13500, 245, 1.1, 145.2],
+            ["2023-08-11", 14200, 238, 0.9, 156.8],
+            ["2023-08-12", 15800, 252, 0.8, 178.2],
+            ["2023-08-13", 16300, 267, 0.7, 189.5],
+            ["2023-08-14", 18200, 280, 0.9, 210.7],
+            ["2023-08-15", 21500, 273, 0.8, 235.6],
+            ["2023-08-16", 19800, 265, 0.7, 215.8],
+          ];
+
+          if (type === "csv") {
+            // 创建CSV内容
+            let csvContent = "data:text/csv;charset=utf-8,";
+            data.forEach((row) => {
+              csvContent += row.join(",") + "\r\n";
+            });
+
+            // 创建下载链接并触发下载
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "dify_performance_data.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else if (type === "excel") {
+            // 使用xlsx库创建工作簿
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "性能数据");
+
+            // 导出Excel文件
+            XLSX.writeFile(wb, "dify_performance_data.xlsx");
+          }
+        }
+
+        // 生成PDF报告
+        function generatePDFReport1() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+
+          // 添加标题
+          doc.setFontSize(18);
+          doc.text("Dify 应用性能分析报告", 105, 15, { align: "center" });
+
+          // 添加日期范围
+          doc.setFontSize(12);
+          const timeRange = document.getElementById("timeRange").value;
+          let dateRangeText = "时间范围: ";
+
+          switch (timeRange) {
+            case "last24h":
+              dateRangeText += "过去24小时";
+              break;
+            case "last7d":
+              dateRangeText += "过去7天";
+              break;
+            case "last30d":
+              dateRangeText += "过去30天";
+              break;
+            case "last90d":
+              dateRangeText += "过去90天";
+              break;
+            case "custom":
+              const startDate = document.getElementById("startDate").value;
+              const endDate = document.getElementById("endDate").value;
+              dateRangeText += `${startDate} 至 ${endDate}`;
+              break;
+          }
+
+          doc.text(dateRangeText, 105, 25, { align: "center" });
+
+          // 添加核心指标
+          doc.setFontSize(14);
+          doc.text("核心指标概览", 20, 35);
+
+          doc.setFontSize(10);
+          doc.text("总调用次数: 1,284,573 (+12.5%)", 20, 45);
+          doc.text("平均响应时间: 267ms (+5.2%)", 20, 52);
+          doc.text("错误率: 0.82% (-0.4%)", 20, 59);
+          doc.text("累计成本: ¥4,782.65 (+8.7%)", 20, 66);
+
+          // 添加图表截图
+          // 注意：在实际应用中，需要使用canvas转为图片，然后添加到PDF中
+          // 这里仅做示例，实际实现较为复杂
+          doc.setFontSize(14);
+          doc.text("调用量与响应时间分析", 20, 80);
+          doc.text("模型性能对比", 20, 140);
+          doc.text("成本分析", 20, 200);
+
+          // 添加页脚
+          doc.setFontSize(8);
+          doc.text("生成时间: " + new Date().toLocaleString(), 20, 280);
+          doc.text("Dify 应用性能分析仪表板", 105, 280, { align: "center" });
+          doc.text("第 1 页", 195, 280, { align: "right" });
+
+          // 保存PDF
+          doc.save("dify_performance_report.pdf");
+        }
+
+        function generatePDFReport() {
+          // 创建一个要打印的div
+          const printDiv = document.createElement("div");
+          printDiv.className = "pdf-content";
+          printDiv.style.width = "210mm";
+          printDiv.style.padding = "20mm";
+          printDiv.style.backgroundColor = "white";
+
+          // 添加标题和内容
+          printDiv.innerHTML = `
+                    <h1 style="text-align:center; font-size:22px; margin-bottom:10px;">Dify 应用性能分析报告</h1>
+                    <p style="text-align:center; font-size:14px; margin-bottom:20px;">生成时间: ${new Date().toLocaleString()}</p>
+                    
+                    <h2 style="font-size:18px; margin-top:15px;">核心指标概览</h2>
+                    <p>总调用次数: 1,284,573 (+12.5%)</p>
+                    <p>平均响应时间: 267ms (+5.2%)</p>
+                    <p>错误率: 0.82% (-0.4%)</p>
+                    <p>累计成本: ¥4,782.65 (+8.7%)</p>
+                  `;
+
+          // 将div添加到文档中
+          document.body.appendChild(printDiv);
+
+          // 捕获所有图表的快照并添加到printDiv
+          const chartDivs = [
+            document.getElementById("callVolumeChart"),
+            document.getElementById("modelComparisonChart"),
+            document.getElementById("costTrendChart"),
+            document.getElementById("costBreakdownChart"),
+            document.getElementById("sessionDurationChart"),
+            document.getElementById("userSatisfactionChart"),
+          ];
+
+          const chartTitles = [
+            "调用量与响应时间分析",
+            "模型性能对比",
+            "成本趋势分析",
+            "成本分布",
+            "会话时长分布",
+            "用户满意度分布",
+          ];
+
+          // 为每个图表创建容器并添加标题
+          chartDivs.forEach((chart, index) => {
+            const chartContainer = document.createElement("div");
+            chartContainer.style.marginTop = "25px";
+            chartContainer.style.marginBottom = "25px";
+
+            const chartTitle = document.createElement("h2");
+            chartTitle.style.fontSize = "18px";
+            chartTitle.textContent = chartTitles[index];
+            chartContainer.appendChild(chartTitle);
+
+            // 使用canvas创建图表的截图
+            const image = new Image();
+            image.src = chart.firstChild
+              ? chart.firstChild.toDataURL("image/png")
+              : "";
+            image.style.width = "100%";
+            image.style.marginTop = "10px";
+            chartContainer.appendChild(image);
+
+            printDiv.appendChild(chartContainer);
+          });
+
+          // 使用html2pdf将div转换为PDF
+          const opt = {
+            margin: [10, 10, 10, 10],
+            filename: "dify_performance_report.pdf",
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          };
+
+          html2pdf()
+            .from(printDiv)
+            .set(opt)
+            .save()
+            .then(() => {
+              // 生成完成后移除临时div
+              document.body.removeChild(printDiv);
+            });
+        }
+        function generatePDFReport() {
+          // 首先获取所有图表的数据URL
+          const chartObjects = [
+            { chart: callVolumeChart, title: "调用量与响应时间分析" },
+            { chart: modelComparisonChart, title: "模型性能对比" },
+            { chart: costTrendChart, title: "成本趋势分析" },
+            { chart: costBreakdownChart, title: "成本分布" },
+            { chart: sessionDurationChart, title: "会话时长分布" },
+            { chart: userSatisfactionChart, title: "用户满意度分布" },
+          ];
+
+          // 创建一个要打印的div
+          const printDiv = document.createElement("div");
+          printDiv.className = "pdf-content";
+          printDiv.style.width = "210mm";
+          printDiv.style.padding = "20mm";
+          printDiv.style.backgroundColor = "white";
+
+          // 添加标题和内容
+          printDiv.innerHTML = `
+                    <h1 style="text-align:center; font-size:22px; margin-bottom:10px;">Dify 应用性能分析报告</h1>
+                    <p style="text-align:center; font-size:14px; margin-bottom:20px;">生成时间: ${new Date().toLocaleString()}</p>
+                    
+                    <h2 style="font-size:18px; margin-top:15px;">核心指标概览</h2>
+                    <p>总调用次数: 1,284,573 (+12.5%)</p>
+                    <p>平均响应时间: 267ms (+5.2%)</p>
+                    <p>错误率: 0.82% (-0.4%)</p>
+                    <p>累计成本: ¥4,782.65 (+8.7%)</p>
+                  `;
+
+          // 将div添加到文档中
+          document.body.appendChild(printDiv);
+
+          // 获取所有图表的数据URL并创建图片元素
+          const promises = chartObjects.map((item) => {
+            return new Promise((resolve) => {
+              try {
+                // 使用ECharts的getDataURL方法获取图表的数据URL
+                const dataURL = item.chart.getDataURL({
+                  pixelRatio: 2,
+                  backgroundColor: "#fff",
+                });
+                resolve({ dataURL, title: item.title });
+              } catch (error) {
+                console.error("获取图表数据URL出错:", error);
+                resolve({ dataURL: "", title: item.title });
+              }
+            });
+          });
+
+          // 等待所有图表数据URL获取完成
+          Promise.all(promises).then((results) => {
+            // 为每个图表创建容器并添加标题和图片
+            results.forEach((result) => {
+              if (!result.dataURL) return;
+
+              const chartContainer = document.createElement("div");
+              chartContainer.style.marginTop = "25px";
+              chartContainer.style.marginBottom = "25px";
+
+              const chartTitle = document.createElement("h2");
+              chartTitle.style.fontSize = "18px";
+              chartTitle.textContent = result.title;
+              chartContainer.appendChild(chartTitle);
+
+              // 创建图片元素并设置数据URL
+              const image = new Image();
+              image.src = result.dataURL;
+              image.style.width = "100%";
+              image.style.marginTop = "10px";
+              chartContainer.appendChild(image);
+
+              printDiv.appendChild(chartContainer);
+            });
+
+            // 使用html2pdf将div转换为PDF
+            const opt = {
+              margin: [10, 10, 10, 10],
+              filename: "dify_performance_report.pdf",
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: true,
+              },
+              jsPDF: {
+                unit: "mm",
+                format: "a4",
+                orientation: "portrait",
+                compress: true,
+              },
+            };
+
+            html2pdf()
+              .from(printDiv)
+              .set(opt)
+              .save()
+              .then(() => {
+                // 生成完成后移除临时div
+                document.body.removeChild(printDiv);
+              })
+              .catch((error) => {
+                console.error("生成PDF时出错:", error);
+                alert("生成PDF报告失败，请查看控制台获取更多信息。");
+                document.body.removeChild(printDiv);
+              });
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
